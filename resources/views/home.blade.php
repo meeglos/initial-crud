@@ -121,8 +121,11 @@
                     <div class="column text-center">
                         <h3>Empleado</h3>
                     </div>
-                    <div class="column">
-                        Tabla Empleados
+                    <div class="column" v-if="positions.length">
+                        <a class="button is-success" @click="openModal('employee','create')">Agregar Empleado</a>
+                    </div>
+                    <div class="column" v-else>
+                        <span class="text-danger">Debe existir un cargo por lo menos</span>
                     </div>
                 </div>
             </div>
@@ -160,6 +163,33 @@
                             El nombre del Cargo no puede estar vacio
                         </div>
                     </div>
+                    <p class="control" v-if="modalEmployee">
+                        <input class="input" :readonly="modalEmployee==3" placeholder="Nombre" v-model="nameEmployee">
+                        <input class="input" :readonly="modalEmployee==3" placeholder="Apellido"
+                                v-model="lastnameEmployee">
+                        <input class="input" :readonly="modalEmployee==3" placeholder="Correo" v-model="emailEmployee">
+                        <birthdayPicker :birthday.sync="birthdayEmployee"
+                                        v-if="modalEmployee==1 || modalEmployee==2"
+                                        :today="birthdayEmployee"></birthdayPicker>
+                        <input class="input" v-model="birthdayEmployee" readonly v-if="modalEmployee==3">
+                        <label>Departamento: </label>
+                        <select class="select" :disabled="modalEmployee==3" v-model="idFilterDeparture">
+                            <option v-for="departure in filterDeparture" :value="departure.id">@{{ departure.title }}
+                            </option>
+                        </select>
+                        <label>Cargo: </label>
+                        <select class="select" :disabled="modalEmployee==3" v-model="idFilterPosition">
+                            <option v-for="position in filterPosition" :value="position.id">@{{ position.title }}
+                            </option>
+                        </select>
+                    </p>
+                    <div v-show="errorEmployee" class="columns text-center">
+                        <div class="column text-center text-danger">
+                            <div v-for="error in errorMessageEmployee">
+                                @{{ error }}
+                            </div>
+                        </div>
+                    </div>
                     <div class="columns button-content">
                         <div class="column">
                             <a class="button is-success" @click="createDeparture()" v-if="modalDeparture==1">Aceptar</a>
@@ -168,6 +198,9 @@
                             <a class="button is-success" @click="createPosition()"  v-if="modalPosition==1">Aceptar</a>
                             <a class="button is-success" @click="updatePosition()"  v-if="modalPosition==2">Aceptar</a>
                             <a class="button is-success" @click="destroyPosition()" v-if="modalPosition==3">Aceptar</a>
+                            <a class="button is-success" @click="createEmployee()" v-if="modalEmployee==1">Aceptar</a>
+                            <a class="button is-success" @click="updateEmployee()" v-if="modalEmployee==2">Aceptar</a>
+                            <a class="button is-success" @click="destroyEmployee()" v-if="modalEmployee==3">Aceptar</a>
                         </div>
                         <div class="column">
                             <a class="button is-danger" @click="closeModal()">Cancelar</a>
@@ -203,14 +236,54 @@
                 titlePosition: '',
                 errorTitlePosition: 0,
                 idDeparturePosition:0,
-                idPosition:0
+                idPosition:0,
+                /***** Employee *****/
+                idEmployee: 0,
+                employee: [],
+                modalEmployee: 0,
+                nameEmployee: '',
+                lastnameEmployee: '',
+                emailEmployee: '',
+                birthdayEmployee: '',
+                idFilterDeparture: 0,
+                filterDeparture: [],
+                idFilterPosition: 0,
+                filterPosition: [],
+                errorEmployee: 0,
+                errorMessageEmployee: [],
+                nowatch: 0,
             },
             watch: {
                 modalGeneral: function (value) {
                     if (!value) this.allQuery();
+                },
+                idFilterDeparture: function (value) {
+                    let me = this;
+                    this.filterDeparture.map(function (x) {
+                        if (x.id === value) {
+                            me.filterPosition = x.positions;
+                            if (!me.nowatch) {
+                                me.idFilterPosition = me.filterPosition[0].id;
+                            }
+                            else {
+                                me.idFilterPosition = me.nowatch;
+                            }
+                        }
+                    });
+                    this.nowatch = 0;
                 }
             },
             methods: {
+                validateEmployee() {
+                    this.errorEmployee = 0;
+                    this.errorMessageEmployee = [];
+                    if (!this.nameEmployee) this.errorMessageEmployee.push('El nombre no puede estar vacio');
+                    if (!this.lastnameEmployee) this.errorMessageEmployee.push("El apellido no puede estar vacio");
+                    if (!this.emailEmployee) this.errorMessageEmployee.push('El correo electronico no puede estar vacio');
+                    if (!this.birthdayEmployee) this.errorMessageEmployee.push('La fecha de nacimiento no puede estar vacia');
+                    if (this.errorMessageEmployee.length) this.errorEmployee = 1;
+                    return this.errorEmployee;
+                },
                 allQuery() {
                     let me = this;
                     axios.get('{{route('allQuery')}}')
@@ -218,6 +291,117 @@
                             let answer = response.data;
                             me.departures = answer.departures;
                             me.positions=answer.positions;
+                        })
+                        .catch(function (error) {
+                            console.log(error);
+                        });
+                },
+                                createEmployee() {
+                    if (this.validateEmployee()) {
+                        return;
+                    }
+                    let me = this;
+                    axios.post('{{route('employeecreate')}}', {
+                        'name': this.nameEmployee,
+                        'lastname': this.lastnameEmployee,
+                        'email': this.emailEmployee,
+                        'birthday': this.birthdayEmployee,
+                        'position': this.idFilterPosition
+                    })
+                        .then(function (response) {
+                            me.errorMessageEmployee = [];
+                            me.errorEmployee = 0;
+                            if (response.data.date) {
+                                me.errorEmployee = 1;
+                                me.errorMessageEmployee.push(response.data.date[0]);
+                            } else {
+                                me.nameEmployee = '';
+                                me.lastnameEmployee = '';
+                                me.emailEmployee = '';
+                                me.birthdayEmployee = '';
+                                me.idFilterPosition = 0;
+                                me.errorEmployee = 0;
+                                me.errorMessageEmployee = [];
+                                me.modalEmployee = 0;
+                                me.closeModal();
+                            }
+                        })
+                        .catch(function (error) {
+                            me.errorMessageEmployee = [];
+                            me.errorEmployee = 0;
+                            if (error.response && error.response.status === 500) {
+                                console.log(error.response.data)
+                            }
+                            if (error.response && error.response.status === 422) {
+                                me.errorEmployee = 1;
+                                error.response.data.email.forEach(function (element) {
+                                    me.errorMessageEmployee.push(element);
+                                });
+                                console.clear();
+                            } else {
+                                console.log(error);
+                            }
+                        });
+                },
+                updateEmployee() {
+                    if (this.validateEmployee()) {
+                        return;
+                    }
+                    let me = this;
+                    axios.put('{{route('employeeupdate')}}', {
+                        'id': this.idEmployee,
+                        'name': this.nameEmployee,
+                        'lastname': this.lastnameEmployee,
+                        'email': this.emailEmployee,
+                        'birthday': this.birthdayEmployee,
+                        'position': this.idFilterPosition
+                    })
+                        .then(function (response) {
+                            me.errorMessageEmployee = [];
+                            me.errorEmployee = 0;
+                            if (response.data.date) {
+                                me.errorEmployee = 1;
+                                me.errorMessageEmployee.push(response.data.date[0]);
+                            } else {
+                                me.nameEmployee = '';
+                                me.lastnameEmployee = '';
+                                me.emailEmployee = '';
+                                me.birthdayEmployee = '';
+                                me.idFilterPosition = 0;
+                                me.errorEmployee = 0;
+                                me.errorMessageEmployee = [];
+                                me.modalEmployee = 0;
+                                me.closeModal();
+                            }
+                        })
+                        .catch(function (error) {
+                            me.errorMessageEmployee = [];
+                            me.errorEmployee = 0;
+                            if (error.response && error.response.status === 500) {
+                                console.log(error.response.data)
+                            }
+                            if (error.response && error.response.status === 422) {
+                                me.errorEmployee = 1;
+                                me.errorMessageEmployee=error.response.data.email;
+                                console.clear();
+                            } else {
+                                console.log(error);
+                            }
+                        });
+                },
+                destroyEmployee() {
+                    let me = this;
+                    axios.delete('{{url('/employee/delete')}}' + '/' + this.idEmployee)
+                        .then(function (response) {
+                            me.nameEmployee = '';
+                            me.lastnameEmployee = '';
+                            me.emailEmployee = '';
+                            me.birthdayEmployee = '';
+                            me.idFilterPosition = 0;
+                            me.errorEmployee = 0;
+                            me.errorMessageEmployee = [];
+                            me.modalEmployee = 0;
+                            me.closeModal();
                         })
                         .catch(function (error) {
                             console.log(error);
@@ -309,6 +493,9 @@
                     this.messageModal = '';
                     this.modalDeparture=0;
                     this.modalPosition=0;
+                    this.modalEmployee = 0;
+                    this.nowatch=0;
+                    this.idFilterDeparture=0;
                 },
                 destroyDeparture(){
                     let me = this;
@@ -417,6 +604,18 @@
                         case "employee": {
                             switch (action) {
                                 case 'create': {
+                                    this.modalGeneral = 1;
+                                    this.titleModal = 'Creación de Empleado';
+                                    this.messageModal = 'Ingrese los datos del Empleado';
+                                    this.modalEmployee = 1;
+                                    this.nameEmployee = '';
+                                    this.lastnameEmployee = '';
+                                    this.emailEmployee = '';
+                                    this.birthdayEmployee = '';
+                                    this.idFilterDeparture = 0;
+                                    this.filterDeparture = [];
+                                    this.idFilterPosition = 0;
+                                    this.filterPosition = [];
                                     break;
                                 }
                                 case 'update': {
