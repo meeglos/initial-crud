@@ -51,12 +51,12 @@
                         <div v-if="!departures.length">
                             No hay departamentos
                         </div>
-                        <table v-else class="table">
+                        <table v-else class="table is-fullwidth" style="font-size: .9em">
                             <thead>
-                            <th>#</th>
-                            <th>Titulo</th>
-                            <th>Eliminar</th>
-                            <th>Editar</th>
+                                <th>#</th>
+                                <th>Titulo</th>
+                                <th class="is-narrow">Eliminar</th>
+                                <th class="is-narrow">Editar</th>
                             </thead>
                             <tbody>
                             <tr v-for="departure in departures">
@@ -91,13 +91,13 @@
                         <div v-if="!positions.length">
                             No hay Cargos
                         </div>
-                        <table v-else class="table">
+                        <table v-else class="table is-fullwidth" style="font-size: .9em">
                             <thead>
                             <th>#</th>
                             <th>Titulo</th>
                             <th>Departamento</th>
-                            <th>Eliminar</th>
-                            <th>Editar</th>
+                            <th class="is-narrow">Eliminar</th>
+                            <th class="is-narrow">Editar</th>
                             </thead>
                             <tbody>
                             <tr v-for="position in positions">
@@ -128,10 +128,51 @@
                         <span class="text-danger">Debe existir un cargo por lo menos</span>
                     </div>
                 </div>
+                <div class="columns">
+                    <div class="column is-12">
+                        <div v-if="!employee.length">
+                            No hay Empleados
+                        </div>
+                        <table v-else class="table is-fullwidth" style="font-size: .9em">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Nombre</th>
+                                    <th>Apellido</th>
+                                    <th>Correo</th>
+                                    <th>Fecha de nacimiento</th>
+                                    <th>Edad</th>
+                                    <th>Cargo</th>
+                                    <th>Departamento</th>
+                                    <th class="is-narrow">Eliminar</th>
+                                    <th class="is-narrow">Editar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="employ in employee">
+                                    <td>@{{ employ.id }}</td>
+                                    <td>@{{ employ.name }}</td>
+                                    <td>@{{ employ.lastname }}</td>
+                                    <td>@{{ employ.email }}</td>
+                                    <td>@{{ employ.birthday }}</td>
+                                    <td>@{{ employ.years }}</td>
+                                    <td>@{{ employ.position.title }}</td>
+                                    <td>@{{ employ.departure.title }}</td>
+                                    <td @click="openModal('employee','delete',employ)">
+                                        <i class="fa fa-ban" aria-hidden="true"></i>
+                                    </td>
+                                    <td @click="openModal('employee','update',employ)">
+                                        <i class="fa fa-pencil" aria-hidden="true"></i>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="columns margin0 text-center vertical-center personal-menu">
-            <div class="column">Empleados 0</div>
+            <div class="column">Empleados @{{ employee.length }}</div>
             <div class="column">Departamentos @{{ departures.length }}</div>
             <div class="column">Cargo @{{ positions.length }}</div>
         </div>
@@ -169,8 +210,7 @@
                                 v-model="lastnameEmployee">
                         <input class="input" :readonly="modalEmployee==3" placeholder="Correo" v-model="emailEmployee">
                         <birthdayPicker :birthday.sync="birthdayEmployee"
-                                        v-if="modalEmployee==1 || modalEmployee==2"
-                                        :today="birthdayEmployee"></birthdayPicker>
+                            v-if="modalEmployee==1 || modalEmployee==2"  :today="birthdayEmployee"></birthdayPicker>
                         <input class="input" v-model="birthdayEmployee" readonly v-if="modalEmployee==3">
                         <label>Departamento: </label>
                         <select class="select" :disabled="modalEmployee==3" v-model="idFilterDeparture">
@@ -185,9 +225,10 @@
                     </p>
                     <div v-show="errorEmployee" class="columns text-center">
                         <div class="column text-center text-danger">
-                            <div v-for="error in errorMessageEmployee">
+                            {{-- <div v-for="error in errorMessageEmployee">
                                 @{{ error }}
-                            </div>
+                            </div> --}}
+                            @{{ errorMessageEmployee }}
                         </div>
                     </div>
                     <div class="columns button-content">
@@ -264,8 +305,7 @@
                             me.filterPosition = x.positions;
                             if (!me.nowatch) {
                                 me.idFilterPosition = me.filterPosition[0].id;
-                            }
-                            else {
+                            } else {
                                 me.idFilterPosition = me.nowatch;
                             }
                         }
@@ -286,17 +326,18 @@
                 },
                 allQuery() {
                     let me = this;
-                    axios.get('{{route('allQuery')}}')
+                    axios.get('{{ route('allQuery') }}')
                         .then(function (response) {
                             let answer = response.data;
                             me.departures = answer.departures;
-                            me.positions=answer.positions;
+                            me.positions = answer.positions;
+                            me.employee = answer.employee;
                         })
                         .catch(function (error) {
                             console.log(error);
                         });
                 },
-                                createEmployee() {
+                createEmployee() {
                     if (this.validateEmployee()) {
                         return;
                     }
@@ -382,7 +423,7 @@
                             }
                             if (error.response && error.response.status === 422) {
                                 me.errorEmployee = 1;
-                                me.errorMessageEmployee=error.response.data.email;
+                                me.errorMessageEmployee = error.response.data.email;
                                 console.clear();
                             } else {
                                 console.log(error);
@@ -612,16 +653,62 @@
                                     this.lastnameEmployee = '';
                                     this.emailEmployee = '';
                                     this.birthdayEmployee = '';
-                                    this.idFilterDeparture = 0;
                                     this.filterDeparture = [];
-                                    this.idFilterPosition = 0;
                                     this.filterPosition = [];
+                                    let me = this;
+                                    this.departures.map(function (x) {
+                                        if (x.positions.length) {
+                                            if (me.filterDeparture.indexOf(x)) me.filterDeparture.push(x);
+                                        }
+                                    });
+                                    if (this.filterDeparture.length) {
+                                        this.idFilterDeparture = this.filterDeparture[0].id;
+                                        this.filterPosition = this.filterDeparture[0].positions;
+                                        this.idFilterPosition = this.filterDeparture[0].positions[0].id;
+                                    } else {
+                                        this.idFilterDeparture = 0;
+                                        this.idFilterPosition = 0;
+                                        this.filterPosition = [];
+                                    }
                                     break;
                                 }
                                 case 'update': {
+                                    this.modalGeneral = 1;
+                                    this.titleModal = 'Modificacion de Empleado';
+                                    this.messageModal = 'Cambie los datos del Empleado';
+                                    this.modalEmployee = 2;
+                                    this.nameEmployee = data['name'];
+                                    this.lastnameEmployee = data['lastname'];
+                                    this.emailEmployee = data['email'];
+                                    this.birthdayEmployee = data['birthday'];
+                                    this.filterDeparture = [];
+                                    this.filterPosition = [];
+                                    this.idEmployee = data['id'];
+                                    let me = this;
+                                    this.departures.map(function (x) {
+                                        if (x.positions.length) {
+                                            if (me.filterDeparture.indexOf(x)) me.filterDeparture.push(x);
+                                        }
+                                    });
+                                    this.nowatch = data['position']['id'];
+                                    this.idFilterDeparture = data['departure']['id'];
                                     break;
                                 }
                                 case 'delete': {
+                                    this.modalGeneral = 1;
+                                    this.titleModal = 'Eliminacion de Empleado';
+                                    this.messageModal = 'Confirme los datos del Empleado';
+                                    this.modalEmployee = 3;
+                                    this.nameEmployee = data['name'];
+                                    this.lastnameEmployee = data['lastname'];
+                                    this.emailEmployee = data['email'];
+                                    this.birthdayEmployee = data['birthday'];
+                                    this.filterDeparture = [];
+                                    this.filterPosition = [];
+                                    this.idEmployee = data['id'];
+                                    this.filterDeparture = this.departures;
+                                    this.nowatch = data['position']['id'];
+                                    this.idFilterDeparture = data['departure']['id'];
                                     break;
                                 }
                             }

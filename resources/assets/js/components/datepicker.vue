@@ -1,10 +1,18 @@
 <script>
     import Datepicker from 'vue-datepicker'
-export default {
-    data() {
+
+    export default {
+        props: {
+            today: {
+                type: String,
+                default: '',
+                required: false
+            }
+        },
+        data() {
             return {
                 startTime: {
-                    time: ''
+                    time: this.today
                 },
                 endtime: {
                     time: ''
@@ -46,9 +54,10 @@ export default {
         components: {
             'date-picker': Datepicker
         }
-} </script>
+    }
+</script>
 <template>
-<div class="content" >
-    <date-picker :date="startTime" :option="option" v-on:change="updateData"></date-picker>
-</div>
+    <div class="content" >
+        <date-picker :date="startTime" :option="option" v-on:change="updateData"></date-picker>
+    </div>
 </template>

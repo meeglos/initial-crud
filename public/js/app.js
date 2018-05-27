@@ -46811,11 +46811,19 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_vue_datepicker___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_vue_datepicker__);
 
 
+
 /* harmony default export */ __webpack_exports__["default"] = ({
+    props: {
+        today: {
+            type: String,
+            default: '',
+            required: false
+        }
+    },
     data: function data() {
         return {
             startTime: {
-                time: ''
+                time: this.today
             },
             endtime: {
                 time: ''

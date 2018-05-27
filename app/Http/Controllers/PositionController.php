@@ -14,9 +14,12 @@ class PositionController extends Controller
         $position->departure_id=$request->departure;
         $position->save();
     }
+
     public function delete($id)
     {
-        Position::find($id)->delete();
+        $position = Position::find($id);
+        $position->employees()->delete();
+        $position->delete();
     }
 
     public function update(Request $request)
